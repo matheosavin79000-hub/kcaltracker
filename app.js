@@ -1005,9 +1005,29 @@ function setupOnboarding(){
   $('#onboarding').classList.remove('hidden');
   $('#ob-next').addEventListener('click',()=>{ if(obStep<OB_STEPS){obStep++;updateObStep();} });
   $('#ob-back').addEventListener('click',()=>{ if(obStep>1){obStep--;updateObStep();} });
-  $('#profile-form').addEventListener('submit',e=>{
+  $('#profile-form').addEventListener('submit',async e=>{
     e.preventDefault();
     const fd=new FormData(e.target);
+    const jsonbinKey=fd.get('jsonbinKey')||null;
+    const jsonbinId=fd.get('jsonbinId')||null;
+
+    // If cloud credentials provided, try to pull existing data first
+    if(jsonbinKey && jsonbinId){
+      showToast('⏳ Récupération des données cloud…');
+      const remote = await Store.pull(jsonbinKey, jsonbinId);
+      if(remote?.profile){
+        // Found existing data in cloud — use it directly, no need to re-enter profile
+        DB = remote;
+        DB.profile.jsonbinKey = jsonbinKey;
+        DB.profile.jsonbinId  = jsonbinId;
+        Store.save(DB);
+        showToast('✓ Profil récupéré depuis le cloud !');
+        showAppScreen();
+        return;
+      }
+    }
+
+    // No cloud data found (or no credentials) — create a new profile from the form
     const profile={
       sex:fd.get('sex'), birthdate:fd.get('birthdate'),
       height:parseFloat(fd.get('height')),
@@ -1020,8 +1040,8 @@ function setupOnboarding(){
       muscle:parseFloat(fd.get('muscle'))||null,
       targetWeight:parseFloat(fd.get('targetWeight'))||null,
       targetBodyfat:parseFloat(fd.get('targetBodyfat'))||null,
-      jsonbinKey:fd.get('jsonbinKey')||null,
-      jsonbinId:fd.get('jsonbinId')||null,
+      jsonbinKey,
+      jsonbinId,
     };
     DB.profile=profile;
     DB.goals={
@@ -1050,9 +1070,13 @@ function setupTabs(){
       $$('.tab').forEach(t=>t.classList.remove('active'));
       tab.classList.add('active');
       $$('.view').forEach(v=>v.classList.remove('active'));
-      $('#view-'+tab.dataset.view).classList.add('active');
+      const view=$('#view-'+tab.dataset.view);
+      view.classList.add('active');
       if(tab.dataset.view==='since-start') renderSinceStart();
-      if(tab.dataset.view==='trends') renderCharts();
+      if(tab.dataset.view==='trends'){
+        // Wait one frame so the section is visible before Chart.js measures canvas
+        requestAnimationFrame(()=>renderCharts());
+      }
     });
   });
 }
@@ -1256,7 +1280,8 @@ function setupExport(){
    PASSWORD / AUTH
    ========================================================= */
 function setupPassword(){
-  const authed=sessionStorage.getItem(AUTH_KEY);
+  // Use localStorage so auth persists across browser sessions/reloads
+  const authed=localStorage.getItem(AUTH_KEY);
   if(authed==='1'){
     $('#screen-password').classList.add('hidden');
     return true;
@@ -1265,7 +1290,7 @@ function setupPassword(){
   const tryLogin=()=>{
     const v=$('#pw-input').value;
     if(v===PASSWORD){
-      sessionStorage.setItem(AUTH_KEY,'1');
+      localStorage.setItem(AUTH_KEY,'1');
       $('#screen-password').classList.add('hidden');
       showAppScreen();
     } else {
