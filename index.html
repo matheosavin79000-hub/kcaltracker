@@ -143,6 +143,7 @@
       <button data-view="journal" class="tab">Journal</button>
     </nav>
     <div class="top-actions">
+      <button id="sync-settings-btn" class="icon-btn" title="Réglages de synchronisation">⚙️</button>
       <button id="sync-btn" class="icon-btn sync-btn" title="Synchroniser">↻</button>
       <button id="theme-toggle" class="icon-btn" title="Changer de thème">🌙</button>
       <button id="export-btn" class="icon-btn" title="Exporter le rapport">⤓</button>
@@ -492,6 +493,26 @@
       </label>
       <p class="hint">Le BMR adapté sera recalculé automatiquement selon ton historique poids/calories.</p>
       <button type="submit" class="btn primary full">Valider</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== SYNC SETTINGS MODAL ===================== -->
+<div id="sync-settings-modal" class="modal hidden">
+  <div class="modal-card" style="max-width:440px;">
+    <div class="modal-head">
+      <h2>Synchronisation entre appareils</h2>
+      <button class="icon-btn" id="close-sync-settings">✕</button>
+    </div>
+    <form id="sync-settings-form" class="modal-form">
+      <p class="hint">Renseigne les mêmes identifiants JSONBin.io sur chacun de tes appareils pour qu'ils partagent les mêmes données. Crée un compte gratuit sur <strong>jsonbin.io</strong>, crée un "Bin", puis colle ta clé API et l'ID du Bin ci-dessous.</p>
+      <label>Clé API JSONBin (X-Master-Key)
+        <input type="text" id="sync-jsonbin-key" placeholder="$2a$10$..." autocomplete="off" />
+      </label>
+      <label>Bin ID
+        <input type="text" id="sync-jsonbin-id" placeholder="6...abc" autocomplete="off" />
+      </label>
+      <button type="submit" class="btn primary full">Enregistrer et synchroniser</button>
     </form>
   </div>
 </div>
