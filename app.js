@@ -1,6 +1,6 @@
 /* =========================================================
    Métabolyse — application logic v2
-   Password: Quarta@79-20
+   Password: root
    Cloud sync: JSONBin.io (optional)
    ========================================================= */
 
