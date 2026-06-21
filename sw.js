@@ -1,5 +1,5 @@
 const CACHE = 'metabolyse-v3';
-const ASSETS = ['./', './index.html', './css/style.css', './js/app.js', './manifest.json'];
+const ASSETS = ['./', './index.html', './style.css', './app.js', './manifest.json'];
 
 self.addEventListener('install', e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));
