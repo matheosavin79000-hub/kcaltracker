@@ -4,7 +4,7 @@
    Cloud sync: JSONBin.io (optional)
    ========================================================= */
 
-const PASSWORD = 'Quarta7920';
+const PASSWORD = 'root';
 const STORAGE_KEY = 'metabolyse:data:v2';
 const THEME_KEY   = 'metabolyse:theme';
 const AUTH_KEY    = 'metabolyse:auth';
