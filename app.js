@@ -48,10 +48,33 @@ const Store = {
 let DB = Store.load() || Store.init();
 function persist(){
   Store.save(DB);
-  // async push to cloud
-  Store.push(DB).then(ok=>{
+  const p=DB.profile;
+  if(!p?.jsonbinKey || !p?.jsonbinId) return;
+  // Pull the latest remote state first and merge it in, so pushing never erases
+  // entries that exist only on the other device but haven't been pulled here yet.
+  Store.pull(p.jsonbinKey,p.jsonbinId).then(remote=>{
+    if(remote?.logs) mergeRemoteLogs(remote.logs);
+    Store.save(DB);
+    return Store.push(DB);
+  }).then(ok=>{
     if(ok) showToast('✓ Données synchronisées');
   });
+}
+
+// Merge remote logs into DB.logs, keeping whichever version of each day is most recent.
+// Entries without an updatedAt timestamp are treated as old/legacy and lose to any timestamped entry.
+function mergeRemoteLogs(remoteLogs){
+  if(!remoteLogs) return false;
+  let changed=false;
+  Object.keys(remoteLogs).forEach(date=>{
+    const remote=remoteLogs[date];
+    const local=DB.logs[date];
+    if(!local){ DB.logs[date]=remote; changed=true; return; }
+    const localTs=local.updatedAt||0;
+    const remoteTs=remote.updatedAt||0;
+    if(remoteTs>localTs){ DB.logs[date]=remote; changed=true; }
+  });
+  return changed;
 }
 
 /* =========================================================
@@ -1090,6 +1113,7 @@ function setupLogModal(){
     entry.sleepScore=parseFloat(fd.get('sleepScore'))||null;
     entry.notes=fd.get('notes')||null;
     entry.sports=getSportActivitiesFromForm();
+    entry.updatedAt=Date.now();
     const photo=fd.get('photo');
     const finish=()=>{
       DB.logs[date]=entry;
@@ -1169,11 +1193,19 @@ function setupSyncSettings(){
     // Pull remote first, merge, then push so both devices end up aligned
     const remote=await Store.pull(key,id);
     if(remote?.logs){
-      Object.keys(remote.logs).forEach(date=>{
-        if(!DB.logs[date]) DB.logs[date]=remote.logs[date];
-      });
+      mergeRemoteLogs(remote.logs);
     }
     if(remote?.goals && !Object.keys(DB.goals||{}).length) DB.goals=remote.goals;
+    // If the remote profile differs from the local one (separate onboarding on each device),
+    // offer to adopt the remote profile so both devices share the same reference data.
+    if(remote?.profile && DB.profile && JSON.stringify(remote.profile)!==JSON.stringify(DB.profile)){
+      const adopt=confirm(
+        "Le profil enregistré sur l'autre appareil est différent du tien (poids/BMR/objectifs de départ).\n\n"+
+        "Veux-tu remplacer ton profil local par celui de l'autre appareil pour que les deux soient identiques ?\n\n"+
+        "OK = utiliser le profil distant   /   Annuler = garder mon profil actuel"
+      );
+      if(adopt) DB.profile=remote.profile;
+    }
     Store.save(DB);
     const ok=await Store.push(DB);
     showToast(ok?'✓ Synchronisé avec succès':'⚠️ Identifiants invalides ou erreur réseau');
@@ -1192,12 +1224,7 @@ function setupSync(){
     // Pull from cloud first
     const remote=await Store.pull(p.jsonbinKey,p.jsonbinId);
     if(remote){
-      // Merge: keep all logs, prefer newer
-      if(remote.logs){
-        Object.keys(remote.logs).forEach(date=>{
-          if(!DB.logs[date]) DB.logs[date]=remote.logs[date];
-        });
-      }
+      mergeRemoteLogs(remote.logs);
       Store.save(DB);
     }
     // Push current
@@ -1291,10 +1318,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(p?.jsonbinKey&&p?.jsonbinId){
       const remote=await Store.pull(p.jsonbinKey,p.jsonbinId);
       if(remote?.logs){
-        let changed=false;
-        Object.keys(remote.logs).forEach(date=>{
-          if(!DB.logs[date]){ DB.logs[date]=remote.logs[date]; changed=true; }
-        });
+        const changed=mergeRemoteLogs(remote.logs);
         if(changed){ Store.save(DB); renderAll(); showToast('✓ Données récupérées depuis le cloud'); }
       }
     }
