@@ -1143,11 +1143,49 @@ function setupCalendarNav(){
   $('#cal-next').addEventListener('click',()=>{ calendarMonth.setMonth(calendarMonth.getMonth()+1); renderCalendar(); });
 }
 
+function setupSyncSettings(){
+  const openBtn=$('#sync-settings-btn');
+  const modal=$('#sync-settings-modal');
+  if(!openBtn||!modal) return;
+  openBtn.addEventListener('click',()=>{
+    $('#sync-jsonbin-key').value=DB.profile?.jsonbinKey||'';
+    $('#sync-jsonbin-id').value=DB.profile?.jsonbinId||'';
+    modal.classList.remove('hidden');
+  });
+  $('#close-sync-settings').addEventListener('click',()=>modal.classList.add('hidden'));
+  modal.addEventListener('click',e=>{ if(e.target.id==='sync-settings-modal') modal.classList.add('hidden'); });
+
+  $('#sync-settings-form').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const key=$('#sync-jsonbin-key').value.trim()||null;
+    const id =$('#sync-jsonbin-id').value.trim()||null;
+    if(!DB.profile){ showToast('⚠️ Crée d\'abord ton profil'); return; }
+    DB.profile.jsonbinKey=key;
+    DB.profile.jsonbinId=id;
+    Store.save(DB);
+    modal.classList.add('hidden');
+    if(!key||!id){ showToast('ℹ️ Synchronisation désactivée (champs vides)'); return; }
+    showToast('⏳ Synchronisation en cours…');
+    // Pull remote first, merge, then push so both devices end up aligned
+    const remote=await Store.pull(key,id);
+    if(remote?.logs){
+      Object.keys(remote.logs).forEach(date=>{
+        if(!DB.logs[date]) DB.logs[date]=remote.logs[date];
+      });
+    }
+    if(remote?.goals && !Object.keys(DB.goals||{}).length) DB.goals=remote.goals;
+    Store.save(DB);
+    const ok=await Store.push(DB);
+    showToast(ok?'✓ Synchronisé avec succès':'⚠️ Identifiants invalides ou erreur réseau');
+    if(ok) renderAll();
+  });
+}
+
 function setupSync(){
   $('#sync-btn').addEventListener('click',async()=>{
     const p=DB.profile;
     if(!p?.jsonbinKey||!p?.jsonbinId){
-      showToast('ℹ️ Aucune clé JSONBin configurée');
+      showToast('ℹ️ Configure d\'abord la sync via ⚙️ Réglages');
       return;
     }
     $('#sync-btn').classList.add('syncing');
@@ -1238,6 +1276,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   setupGoals();
   setupCalendarNav();
   setupSync();
+  setupSyncSettings();
   setupExport();
 
   if(authed) showAppScreen();
