@@ -320,16 +320,21 @@ html[data-theme="dark"] .card:hover{box-shadow:0 2px 4px rgba(0,0,0,0.35), 0 18p
   from{opacity:0;transform:translateY(14px) scale(.99);}
   to{opacity:1;transform:none;}
 }
-.tab{transition:background .2s var(--ease),color .2s var(--ease);}
-
-/* ============ CHART ENTRANCE ANIMATION ============ */
-.chart-wrap{animation:chartIn .55s var(--ease);}
-.chart-wrap canvas{max-height:240px;}
 @keyframes chartIn{
   from{opacity:0;transform:translateY(10px) scale(.97);}
   to{opacity:1;transform:none;}
 }
-.card.chart-card.wide .chart-wrap canvas{max-height:320px;}
+.tab{transition:background .2s var(--ease),color .2s var(--ease);}
+
+/* ============ CHART ENTRANCE ANIMATION ============ */
+.chart-wrap{
+  animation:chartIn .55s var(--ease);
+  position:relative;
+  height:240px;
+}
+.chart-wrap canvas{max-height:100%;}
+.card.chart-card.wide .chart-wrap{height:320px;}
+#day-detail .chart-wrap{height:140px;}
 
 /* ============ BADGE GROUPS ============ */
 .badge-group{margin-bottom:18px;}
@@ -344,4 +349,3 @@ html[data-theme="dark"] .card:hover{box-shadow:0 2px 4px rgba(0,0,0,0.35), 0 18p
 /* ============ DAY DETAIL ============ */
 #day-detail .day-detail-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
 #day-detail .chart-wrap{margin-top:14px;}
-
